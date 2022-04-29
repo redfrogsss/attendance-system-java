@@ -12,7 +12,7 @@ This is the `Java` version of this project.
 ![Alt text](./readme-img/07.png "Student Attendance Page")
 ![Alt text](./readme-img/08.png "Attendance History Page")
 
-## Getting Started with `docker-compose`
+## Get Started
 
 To start with, you must install [NetBeans](https://netbeans.apache.org/) with `GlassFish Server` and [MySQL](https://dev.mysql.com/downloads/) with `MySQL Shell` on your computer.
 
