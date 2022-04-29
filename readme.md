@@ -1,7 +1,7 @@
 # Student Attendance Management System (SAMS)
 SAMS - a Student Attendance Management System built with [Java GlassFish](https://glassfish.org/), [Bootstrap](https://getbootstrap.com/), [JQuery](https://jquery.com/) and [MySQL](https://www.mysql.com/).
 
-This is the `Java` version of this project.
+This is the `Java` version of this project. [Click here](https://github.com/redfrogsss/attendance-system-nodejs) to check out the `ExpressJS` version of this project.
 
 ![Alt text](./readme-img/01.png "Login Page")
 ![Alt text](./readme-img/02.png "Teacher Home Page")
