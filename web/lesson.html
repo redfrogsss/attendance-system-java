@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Lesson Page</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/style.css">
+
+
+    <!-- JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+
+    <script>
+        $(document).ready(function () {
+            $("#searchAttendance").on("keyup", function () {
+                var value = $(this).val().toLowerCase();
+                $("#att_table tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+        });
+    </script>
+
+    <script src="js/LoginProtect.js"></script>
+    <script src="js/Attendance.js"></script>
+    <script src="js/Lesson.js"></script>
+    <script src="js/Course.js"></script>
+    <script src="js/User.js"></script>
+
+    <script>
+        const displayCurrentUser = async () => {
+            var name = "";
+            await getCurrentUser().then((user) => {
+                name = user.user_name;
+            });
+
+            $("#current_user_nav").text(name);
+        }
+
+        $(() => {
+
+            const urlParams = new URLSearchParams(window.location.search);
+            // console.log("has id?", urlParams.has("id"));
+            // console.log("get lesson_id?", urlParams.get("lesson_id"));
+
+            if (urlParams.has("id")) {
+
+                //data displaying part
+                getLessonByLessonId(urlParams.get("id")).then((lesson) => {
+                    getCourseById(lesson.course_id).then((course) => {
+                        getAttendanceByLessonId(lesson.id).then((attendance) => {
+                            getAllStudents().then((allStudents) => {
+                                getTeacherByCourseId(course.id).then((teacher) => {
+                                    //calculation
+                                    var per_present = 0;
+                                    var per_late = 0;
+                                    var per_absent = 0;
+
+                                    var total_present = 0;
+                                    var total_late = 0;
+                                    var total_absent = 0;
+                                    var total = allStudents.length;
+
+                                    for (var j in attendance) {
+                                        if (attendance[j].attendance_status === "Present") {
+                                            total_present++;
+                                        }
+                                        if (attendance[j].attendance_status === "Late") {
+                                            total_late++;
+                                        }
+                                    }
+
+                                    total_absent = total - total_present - total_late;
+
+                                    per_present = Math.round((total_present / total) * 100);
+                                    per_late = Math.round((total_late / total) * 100);
+                                    per_absent = Math.round((total_absent / total) * 100);
+                                    //end of calculation
+
+                                    $("#lesson_name").val(lesson.lesson_name);
+                                    $("#lesson_date").val(lesson.lesson_date);
+                                    $("#time_start").val(lesson.time_started);
+                                    $("#time_end").val(lesson.time_ended);
+                                    $("#course_title").text(course.course_code + ' ' + course.course_name);
+                                    $("#attendance_url").val(
+                                        window.location.protocol
+                                        + "//"
+                                        + window.location.hostname
+                                        + ':'
+                                        + window.location.port
+                                        + window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'))
+                                        + "/attendance.html?lesson_id="
+                                        + urlParams.get("id")
+                                    );
+                                    $("#per_present").text(per_present + "%");
+                                    $("#per_late").text(per_late + "%");
+                                    $("#per_absent").text(per_absent + "%");
+                                    $("#teacher_val").text(teacher[0].user_name);
+
+                                    $("#att_table").html("");
+                                    for (var i in allStudents) {
+                                        var status = "Absent";
+                                        var time = "", date = "";
+                                        var att_id;
+                                        for (var j in attendance) {
+                                            if (attendance[j].student_id === allStudents[i].id) {
+                                                status = attendance[j].attendance_status;
+                                                time = attendance[j].attendance_time;
+                                                date = attendance[j].attendance_date;
+                                            }
+                                        }
+                                        var color = "danger";
+                                        if (status === "Present") {
+                                            color = "success";
+                                        } else if (status === "Late") {
+                                            color = "warning";
+                                        }
+
+                                        $("#att_table").html($("#att_table").html() + '<tr> <td> <a href="#" id="modal_student_' + allStudents[i].id + '" class="modal_student" data-toggle="modal" data-target="#myModal"> ' + allStudents[i].user_name + ' </a> </td> <td><span class="badge badge-' + color + '">' + status + '</span></td> <td>' + date + ' ' + time + ' </td> </tr>');
+                                    }
+                                });
+                            });
+                        });
+                    });
+                });
+                //end of data displaying part
+
+                //update lesson 
+                $("#update_btn").click(async () => {
+                    var lesson_id = urlParams.get("id");
+                    var lesson_name = $("#lesson_name").val();
+                    var lesson_date = $("#lesson_date").val();
+                    var time_started = $("#time_start").val();
+                    var time_ended = $("#time_end").val();
+
+                    var time_started_obj = new Date("01/01/2000 " + time_started);
+                    var time_ended_obj = new Date("01/01/2000 " + time_ended);
+
+                    if (time_started_obj < time_ended_obj) {
+                        await updateLesson(lesson_id, lesson_name, lesson_date, time_started, time_ended).then((lesson) => {
+                            // console.log(lesson);
+                        });
+
+                        $("#update_message").html("&#9989; Update Success.");
+                    } else {
+                        $("#update_message").html("&#10060; Update Failed. 'Start From' field must be earlier than 'End at' field.");
+                    }
+
+
+                });
+                //end of update lesson
+            } else {
+                // no url param, go away
+                window.location.href = "index.html";
+            }
+
+            //update attendance
+            $("#updateStatus_btn").click(() => {
+                var student_id = $("#updateStatus_id").val();
+                var status = $("#updateStatus_status").val();
+                var lesson_id = urlParams.get("id");
+                // console.log(student_id, status, lesson_id);
+                updateAttendance(lesson_id, student_id, status).then((res) => {
+                    console.log("res", res);
+                    if (res === "success") {
+                        window.location.reload();
+                    }
+                })
+            });
+
+            displayCurrentUser();
+
+        });
+
+        // click listening for all student name
+        $(document).on('click', '.modal_student', function (e) {
+            $("#updateStatus_id").val(e.target.id.substring(14));
+            $("#modal_student_name").text("Select attendance for " + e.target.text + ":");
+        });
+
+    </script>
+
+</head>
+
+<body>
+
+    <!-- blur bg image -->
+    <div class="bg-image">
+        <div class="blur"></div>
+    </div>
+
+    <!-- navbar for teacher -->
+    <nav class="navbar navbar-expand-md bg-dark navbar-dark">
+        <a class="navbar-brand" href="teacher_home.html">Student Attendance Management System</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsibleNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse justify-content-end" id="collapsibleNavbar">
+            <ul class="navbar-nav navbar-right">
+                <li class="nav-item">
+                    <a class="nav-link" href="#"><img src="img/account.png" height="24px" alt="">
+                        <section id="current_user_nav" style="display: inline;"></section>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="teacher_history.html"><img src="img/history.png" height="24px" alt="">
+                        Lessons Records
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="Logout"><img src="img/logout.png" height="24px" alt=""> Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <!-- end of navbar for teacher -->
+
+
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <!-- gray window -->
+                <div class="jumbotron">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <h2 id="course_title"></h2>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <h4>Lesson Information</h4>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <p>
+                            <table class="table table-striped">
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <b>Lesson Name</b>
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control" name="lesson_name" id="lesson_name">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <b>Teacher </b>
+                                        </td>
+                                        <td>
+                                            <select class="form-control" name="teacher" id="teacher" disabled>
+                                                <option value="Liu" id="teacher_val">Liu</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <b>Date</b>
+                                        </td>
+                                        <td>
+                                            <input class="form-control" type="date" name="date" id="lesson_date">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <b>Start From</b>
+                                        </td>
+                                        <td>
+                                            <input class="form-control" type="time" name="time_start" id="time_start">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <b>End at</b>
+                                        </td>
+                                        <td>
+                                            <input class="form-control" type="time" name="time_end" id="time_end">
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            </p>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-5"></div>
+                            <div class="col-sm-2">
+                                <button class="btn btn-primary" type="button" style="width: 100%;"
+                                    id="update_btn">Update</button>
+                            </div>
+                            <div class="col-sm-5"></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <center>
+                                    <p id="update_message">
+                                        <!-- &#9989; Update Success. -->
+                                    </p>
+                                </center>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <hr />
+                            </div>
+                        </div>
+                        <div clas="row">
+                            <div class="col-sm-12">
+                                <h4>
+                                    Lesson URL
+                                </h4>
+                                <p>Please send this url to students for taking attendance.</p>
+                            </div>
+                            <div class="col-sm-12">
+                                <input id="attendance_url" type="text" class="form-control" value="google.com" readonly>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <hr />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <h4>
+                                    Attendance Status
+                                </h4>
+                                <div class="card">
+                                    <div class="card-body">
+                                        <p>
+                                            During this lesson, <br>
+                                            <span id="per_present" class="badge badge-pill badge-success">90%</span>
+                                            students are present, <br>
+                                            <span id="per_late" class="badge badge-pill badge-warning">5%</span>
+                                            students are late, <br>
+                                            <span id="per_absent" class="badge badge-pill badge-danger">5%</span>
+                                            students are absent.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <hr>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <input class="form-control" id="searchAttendance" type="text" placeholder="Search...">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Student Name</th>
+                                                <th>Status</th>
+                                                <th>Timestamp</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="att_table">
+                                            <!-- <tr>
+                                                <td>
+                                                    <a href="#" data-toggle="modal" data-target="#myModal">
+                                                        Fan Tsz Kin
+                                                    </a>
+                                                </td>
+                                                <td><span class="badge badge-danger">Absent</span></td>
+                                                <td>11 May 2021 19:15</td>
+                                            </tr> -->
+                                            <!-- <tr>
+                                                <td>
+                                                    <a href="#" data-toggle="modal" data-target="#myModal">
+                                                        CHU Shun Hei
+                                                    </a>
+                                                </td>
+                                                <td><span class="badge badge-success">Present</span></td>
+                                                <td>11 May 2021 19:15</td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <a href="#" data-toggle="modal" data-target="#myModal">
+                                                        PUN Yiu Kwan
+                                                    </a>
+                                                </td>
+                                                <td><span class="badge badge-warning">Late</span></td>
+                                                <td>11 May 2021 19:15</td>
+                                            </tr> -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- end of gray window -->
+            </div>
+        </div>
+
+        <!-- Modal -->
+        <div class="modal fade" id="myModal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                        <h4 class="modal-title">Editing Attendance</h4>
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    </div>
+
+                    <!-- Modal body -->
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="updateStatus_status" id="modal_student_name">Select attendance for Fan Tsz
+                                Kin:</label>
+                            <select class="form-control" id="updateStatus_status">
+                                <option value="Absent">Absent</option>
+                                <option value="Late">Late</option>
+                                <option value="Present">Present</option>
+                            </select>
+                            <input type="hidden" id="updateStatus_id" value="">
+                        </div>
+                    </div>
+
+                    <!-- Modal footer -->
+                    <div class="modal-footer">
+                        <button id="updateStatus_btn" type="button" class="btn btn-primary">Update</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <!-- end of modal -->
+    </div>
+
+</body>
+
+</html>

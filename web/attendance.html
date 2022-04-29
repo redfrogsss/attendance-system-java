@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Home Page</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/style.css">
+
+
+    <!-- JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+    <script src="js/LoginProtect.js"></script>
+    <script src="js/Attendance.js"></script>
+    <script src="js/Lesson.js"></script>
+    <script src="js/Course.js"></script>
+    <script src="js/User.js"></script>
+
+    <script>
+        const pageProtection = async () => {
+            var u;
+            await getCurrentUser().then((user) => {
+                u = user;
+            });
+            if (u.user_role !== "student") {
+                window.location.href = "index.html";
+            }
+        }
+
+        pageProtection();
+
+        const goBack = () => {
+            window.location.href = "index.html";
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+
+        const displayCurrentUser = async () => {
+            var name = "";
+            await getCurrentUser().then((user) => {
+                name = user.user_name;
+            });
+
+            $("#current_user_nav").text(name);
+        }
+
+        $(() => {
+            if (urlParams.has("id")) {
+                // display attendance record
+                getCurrentUser().then((user) => {
+                    getAttendanceById(urlParams.get("id")).then((att) => {
+                        if (att) {
+                            if (att.student_id === user.id) {
+                                getLessonByLessonId(att.lesson_id).then((lesson) => {
+                                    getCourseById(lesson.course_id).then((course) => {
+                                        getTeacherByCourseId(course.id).then((teacher) => {
+                                            $("#desciption").text("You have took attendance for " + course.course_code + " " + course.course_name + ".");
+                                            $("#course_code").text(course.course_code);
+                                            $("#course_name").text(course.course_name);
+                                            $("#lesson_name").text(lesson.lesson_name);
+                                            $("#attendance_date").text(att.attendance_date);
+                                            $("#attendance_time").text(att.attendance_time);
+                                            if (att.attendance_status === "Present") {
+                                                $("#attendance_status").html("<span class='badge badge-success'>Present</span>");
+                                            } else if (att.attendance_status === "Late") {
+                                                $("#attendance_status").html("<span class='badge badge-warning'>Late</span>");
+                                            } else if (att.attendance_status === "Absent") {
+                                                $("#attendance_status").html("<span class='badge badge-danger'>Absent</span>");
+                                            }
+                                            $("#Teacher").text("");
+                                            for (var i in teacher) {
+                                                $("#Teacher").text($("#Teacher").text() + teacher[i].user_name);
+                                            }
+                                            $("#welldown").text("Well Done, " + user.user_name + ".");
+                                        });
+                                    });
+                                });
+                            } else {
+                                $("#table_body").html("<tr><td><center>Something wrong. Please try again.</center></td></tr>");
+                            }
+                        }
+                    });
+                });
+            } else if (urlParams.has("lesson_id")) {
+                // take attendance and display attendance record
+                getUserAttendance(urlParams.get("lesson_id")).then((res) => {   //have taken before?
+                    console.log("res", res);
+                    if (res.length === 0) {
+                        getCurrentUser().then((currentUser) => {    //is student?
+                            if (currentUser.user_role === "student") {
+                                getLessonByLessonId(urlParams.get("lesson_id")).then((lesson) => {  //within time period?
+                                    var time_started_obj = new Date(lesson.lesson_date + " " + lesson.time_started);
+                                    var time_ended_obj = new Date(lesson.lesson_date + " " + lesson.time_ended);
+                                    var currentTime = new Date();
+                                    if (time_started_obj < currentTime && currentTime < time_ended_obj) {
+                                        createAttendance(urlParams.get("lesson_id")).then((att) => {
+                                            window.location.href = "attendance.html?id=" + att.id;
+                                        });
+                                    } else {
+                                        $("#table_body").html("<tr><td><center>You can only take attendance within the lesson time.</center></td></tr>");
+                                    }
+                                });
+
+                            } else {
+                                $("#table_body").html("<tr><td><center>You can only take attendance as a student.</center></td></tr>");
+                            }
+                        });
+
+                    } else {
+                        window.location.href = "attendance.html?id=" + res[0].id;
+                    }
+                });
+
+            } else {
+                // something wrong, back to index
+                $("#table_body").html("<tr><td><center>Something wrong. Please try again.</center></td></tr>");
+            }
+
+            displayCurrentUser();
+        });
+    </script>
+
+</head>
+
+<body>
+
+    <!-- blur bg image -->
+    <div class="bg-image">
+        <div class="blur"></div>
+    </div>
+
+    <!-- navbar -->
+    <nav class="navbar navbar-expand-md bg-dark navbar-dark">
+        <a class="navbar-brand" href="student_home.html">Student Attendance Management System</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsibleNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse justify-content-end" id="collapsibleNavbar">
+            <ul class="navbar-nav navbar-right">
+                <li class="nav-item">
+                    <a class="nav-link" href="#"><img src="img/account.png" height="24px" alt="">
+                        <section id="current_user_nav" style="display: inline;"></section>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="student_history.html"><img src="img/history.png" height="24px" alt="">
+                        History</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="Logout"><img src="img/logout.png" height="24px" alt=""> Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <!-- gray window -->
+                <div class="jumbotron">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <h1 id="welldown">
+                                    <!-- Well Done, Jacky. -->
+                                </h1>
+                                <p id="desciption"></p>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <tbody id="table_body">
+                                            <tr>
+                                                <td><b>Course Code</b></td>
+                                                <td id="course_code"></td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Course Name</b></td>
+                                                <td id="course_name"></td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Lesson Name</b></td>
+                                                <td id="lesson_name"></td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Teacher</b></td>
+                                                <td>
+                                                    <span class="badge badge-secondary" id="Teacher"></span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Timestamp</b></td>
+                                                <td>
+                                                    <div id="attendance_date" style="display: inline;"></div>&nbsp;<div
+                                                        id="attendance_time" style="display: inline;"></div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td><b>Attendance</b></td>
+                                                <td id="attendance_status">
+                                                    <!-- <span class="badge badge-success"></span> -->
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-5"></div>
+                            <div class="col-sm-2">
+                                <button class="btn btn-primary" style="width: 100%;" onclick="goBack()">Back</button>
+                            </div>
+                            <div class="col-sm-5"></div>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- end of gray window -->
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

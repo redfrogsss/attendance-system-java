@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>History Page</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+
+
+    <script src="js/LoginProtect.js"></script>
+    <script src="js/Attendance.js"></script>
+    <script src="js/Lesson.js"></script>
+    <script src="js/Course.js"></script>
+    <script src="js/User.js"></script>
+
+    <script>
+        const displayRecords = async () => {
+            var htmlToBeUpdated = "";
+
+            var att;
+            await getAllAttendance().then((a) => {
+                att = a;
+            });
+
+            att.reverse();
+
+            if (att.length != 0) {
+                for (var rec in att) {
+                    var lesson;
+                    await getLessonByLessonId(att[rec].lesson_id).then((l) => {
+                        lesson = l;
+                    });
+
+                    var course;
+                    await getCourseById(lesson.course_id).then((c) => {
+                        course = c;
+                    });
+
+                    var teacher;
+                    await getTeacherByCourseId(lesson.course_id).then((t) => {
+                        teacher = t;
+                    });
+
+                    const teacherToHtml = () => {
+                        var result = "";
+                        for (var i in teacher) {
+                            result = '<span class="badge badge-secondary">'
+                                + teacher[i].user_name
+                                + '</span>'
+                        }
+                        return result;
+                    }
+
+                    const new_badge = (count) => {
+                        if (count < 3) {
+                            return '<span class="badge badge-info">New</span>';
+                        } else {
+                            return '';
+                        }
+                    }
+
+                    const lesson_status = (status) => {
+                        var result = "";
+
+                        if (status === "Present") {
+                            result = '<span class="badge badge-success">Present</span>';
+                        } else if (status === "Late") {
+                            result = '<span class="badge badge-warning">Late</span>';
+                        }
+
+                        return result;
+                    }
+
+                    htmlToBeUpdated +=
+                        '<tr> <td>'
+                        + course.course_code
+                        + '</td> <td>'
+                        + course.course_name
+                        + '</td> <td> <a href="attendance.html?id='
+                        + att[rec].id + '"> '
+                        + lesson.lesson_name
+                        + ' </a> </td> <td> '
+                        + teacherToHtml()
+                        + ' </td> <td>'
+                        + lesson_status(att[rec].attendance_status)
+                        + '</td> <td>'
+                        + att[rec].attendance_date
+                        + ' '
+                        + att[rec].attendance_time
+                        + ' '
+                        + new_badge(rec)
+                        + '</td> </tr>';
+                }
+            }
+
+            $("#att_table").html("");   //empty table
+            $("#att_table").html(htmlToBeUpdated);
+        }
+
+        const displayCurrentUser = async () => {
+            var name = "";
+            await getCurrentUser().then((user) => {
+                name = user.user_name;
+            });
+
+            $("#current_user_nav").text(name);
+        }
+
+        $(document).ready(function () {
+            $("#searchInput").on("keyup", function () {
+                var value = $(this).val().toLowerCase();
+                $("#att_table tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+        });
+
+        $(() => {
+            displayRecords();
+            displayCurrentUser();
+        });
+    </script>
+
+</head>
+
+<body>
+
+    <!-- blur bg image -->
+    <div class="bg-image">
+        <div class="blur"></div>
+    </div>
+
+    <!-- navbar for student -->
+    <nav class="navbar navbar-expand-md bg-dark navbar-dark">
+        <a class="navbar-brand" href="student_home.html">Student Attendance Management System</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsibleNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse justify-content-end" id="collapsibleNavbar">
+            <ul class="navbar-nav navbar-right">
+                <li class="nav-item">
+                    <a class="nav-link" href="#"><img src="img/account.png" height="24px" alt="">
+                        <section id="current_user_nav" style="display: inline;"></section>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="student_history.html"><img src="img/history.png" height="24px" alt="">
+                        History</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="Logout"><img src="img/logout.png" height="24px" alt=""> Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <!-- end of navbar for student -->
+
+
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <!-- gray window -->
+                <div class="jumbotron">
+                    <h2>Attendance History</h2>
+                    <p>You can see all your attendance history below.</p>
+                    <input class="form-control" id="searchInput" type="text" placeholder="Search Attendance...">
+                    <br>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Course Code</th>
+                                    <th>Course Name</th>
+                                    <th>Lesson</th>
+                                    <th>Teacher</th>
+                                    <th>Status</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="att_table">
+                                <!-- <tr>
+                                    <td>AST10201</td>
+                                    <td>Computer Organization</td>
+                                    <td>
+                                        <a href="attendance.html">
+                                            Lecture 1 - Learn how to write MIPS
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-secondary">
+                                            Liu
+                                        </span>
+                                    </td>
+                                    <td>9 May 2021 23:07 <span class="badge badge-info">New</span></td>
+                                </tr> -->
+                                <!-- <tr>
+                                    <td>AST10303</td>
+                                    <td>Understanding the Network-Centric World</td>
+                                    <td>
+                                        <a href="attendance.html">
+                                            Lab 1
+                                        </a>
+                                    </td>
+                                    <td><span class="badge badge-secondary">Yan</span></td>
+                                    <td>9 May 2021 23:07</td>
+                                </tr>
+                                <tr>
+                                    <td>AST10106</td>
+                                    <td>Introduction to Programming</td>
+                                    <td>
+                                        <a href="attendance.html">
+                                            Lab 1 - Hello World
+                                        </a>
+                                    </td>
+                                    <td><span class="badge badge-secondary">Pang</span></td>
+                                    <td>9 May 2021 23:07</td>
+                                </tr> -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+                <!-- end of gray window -->
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

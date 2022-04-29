@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Home Page</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+
+    <script>
+        $.post(
+            "GetLoginStatus"
+        ).done((data, status) => {
+            if (data !== "null") {
+                window.location.href = "index.html";
+            }
+        });
+
+        $(() => {
+            $("#LoginFormBtn").click(() => {
+                console.log("test");
+
+                var email = $("#i_email").val();
+                var pwd = $("#i_pwd").val();
+
+                $.post(
+                    "Login",
+                    {
+                        email: email,
+                        pwd: pwd
+                    }
+                ).done((data, status) => {
+                    if (data === "success") {
+                        window.location.href = "index.html";
+                    } else {
+                        $("#login_result").html(data);
+                    }
+                });
+            });
+        });
+
+    </script>
+
+</head>
+
+<body>
+
+    <!-- blur bg image -->
+    <div class="bg-image">
+        <div class="blur"></div>
+    </div>
+
+    <!-- navbar -->
+    <nav class="navbar navbar-expand-md bg-dark navbar-dark">
+        <a class="navbar-brand" href="index.html">Student Attendance Management System</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#collapsibleNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse justify-content-end" id="collapsibleNavbar">
+            <ul class="navbar-nav navbar-right">
+                <li class="nav-item">
+                    <a class="nav-link" href="login.html"><img src="img/login.png" height="24px" alt=""> Login</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+
+    <div class="container">
+        <div class="row">
+            <div class="col-sm">
+                <p style="height: 20vh;"></p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-3"></div>
+            <div class="col-sm-6">
+                <!-- login window -->
+                <div class="card">
+                    <div class="card-header">
+                        <b>Please Login.</b>
+                    </div>
+                    <!-- form -->
+                    <form id="LoginForm">
+                        <div class="card-body">
+                            <div class="form-group">
+                                <!-- <label for="email">Email address:</label> -->
+                                <input type="email" class="form-control" placeholder="Email" id="i_email">
+                            </div>
+                            <div class="form-group">
+                                <!-- <label for="pwd">Password:</label> -->
+                                <input type="password" class="form-control" placeholder="Password" id="i_pwd">
+                            </div>
+                            <div id="login_result"></div>
+
+                        </div>
+                        <div class="card-footer">
+                            <button id="LoginFormBtn" type="button" class="btn btn-primary">Login</button>
+                        </div>
+                    </form>
+                    <!-- end of form -->
+
+                </div>
+                <!-- end of login window -->
+            </div>
+            <div class="col-sm-3"></div>
+        </div>
+
+    </div>
+
+</body>
+
+</html>
